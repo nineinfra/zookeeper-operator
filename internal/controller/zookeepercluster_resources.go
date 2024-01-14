@@ -40,10 +40,20 @@ func getClusterDomain(cluster *zookeeperv1.ZookeeperCluster) string {
 	return DefaultClusterDomain
 }
 
+func getZooConfigValue(cluster *zookeeperv1.ZookeeperCluster, key string, value string) string {
+	if cluster.Spec.Conf != nil {
+		if value, ok := cluster.Spec.Conf[key]; ok {
+			return value
+		}
+	}
+	return value
+}
+
 func constructZooConfig(cluster *zookeeperv1.ZookeeperCluster) string {
 	zooConf := make(map[string]string)
-	zooConf["dataDir"] = DefaultDataPath
-	zooConf["dataLogDir"] = DefaultLogPath
+	for k, v := range DefaultZooConfKeyValue {
+		zooConf[k] = getZooConfigValue(cluster, k, v)
+	}
 	replicas := getReplicas(cluster)
 	for i := 0; i < int(replicas); i++ {
 		zooConf[fmt.Sprintf("servier.%d", i+1)] = fmt.Sprintf("%s-%d.%s.%s.svc.%s:%d:%d",
@@ -57,7 +67,9 @@ func constructZooConfig(cluster *zookeeperv1.ZookeeperCluster) string {
 	}
 	if cluster.Spec.Conf != nil {
 		for k, v := range cluster.Spec.Conf {
-			zooConf[k] = v
+			if _, ok := DefaultZooConfKeyValue[k]; !ok {
+				zooConf[k] = v
+			}
 		}
 	}
 	return map2String(zooConf)
@@ -76,15 +88,28 @@ func constructLogConfig() string {
 	return map2String(tmpConf)
 }
 
-func constructStartScript() string {
-	return "#!/bin/sh\n\n" +
-		"ZOOKEEPER_ID=${POD_NAME##*-}" + "\n" +
-		"ZOOKEEPER_ID=$((ZOOKEEPER_ID+1))" + "\n" +
-		"echo $ZOOKEEPER_ID > $ZOOKEEPER_DATA_DIR/myid" + "\n" +
-		"mkdir -p $ZOOKEEPER_HOME/logs" + "\n" +
-		"export ZOO_LOG_DIR=$ZOOKEEPER_HOME/logs" + "\n" +
-		"exec $ZOOKEEPER_HOME/bin/zkServer.sh start-foreground"
+//func constructStartScript() string {
+//	return "#!/bin/sh\n\n" +
+//		"ZOOKEEPER_ID=${POD_NAME##*-}" + "\n" +
+//		"ZOOKEEPER_ID=$((ZOOKEEPER_ID+1))" + "\n" +
+//		"echo ${ZOOKEEPER_ID} > ${ZOOKEEPER_DATA_DIR}/myid" + "\n" +
+//		fmt.Sprintf("exec %s/bin/zkServer.sh start-forground", DefaultZookeeperHome)
+//}
 
+func getImageConfig(cluster *zookeeperv1.ZookeeperCluster) zookeeperv1.ImageConfig {
+	ic := zookeeperv1.ImageConfig{
+		Repository:  cluster.Spec.Image.Repository,
+		PullSecrets: cluster.Spec.Image.PullSecrets,
+	}
+	ic.Tag = cluster.Spec.Image.Tag
+	if ic.Tag == "" {
+		ic.Tag = cluster.Spec.Version
+	}
+	ic.PullPolicy = cluster.Spec.Image.PullPolicy
+	if ic.PullPolicy == "" {
+		ic.PullPolicy = string(corev1.PullIfNotPresent)
+	}
+	return ic
 }
 
 func (r *ZookeeperClusterReconciler) constructHeadlessService(cluster *zookeeperv1.ZookeeperCluster) (*corev1.Service, error) {
@@ -163,9 +188,9 @@ func (r *ZookeeperClusterReconciler) constructConfigMap(cluster *zookeeperv1.Zoo
 			Labels:    ClusterResourceLabels(cluster),
 		},
 		Data: map[string]string{
-			DefaultZooConfigFileName:   constructZooConfig(cluster),
-			DefaultLogConfigFileName:   constructLogConfig(),
-			DefaultStartScriptFileName: constructStartScript(),
+			DefaultZooConfigFileName: constructZooConfig(cluster),
+			DefaultLogConfigFileName: constructLogConfig(),
+			//DefaultStartScriptFileName: constructStartScript(),
 		},
 	}
 	if err := ctrl.SetControllerReference(cluster, cm, r.Scheme); err != nil {
@@ -210,16 +235,22 @@ func (r *ZookeeperClusterReconciler) defaultZookeeperPorts() []corev1.ContainerP
 
 func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeeperv1.ZookeeperCluster) corev1.PodSpec {
 	tgp := int64(DefaultTerminationGracePeriod)
+	ic := getImageConfig(cluster)
+	var tmpPullSecrets []corev1.LocalObjectReference
+	if ic.PullSecrets != "" {
+		tmpPullSecrets = make([]corev1.LocalObjectReference, 0)
+		tmpPullSecrets = append(tmpPullSecrets, corev1.LocalObjectReference{Name: ic.PullSecrets})
+	}
 	return corev1.PodSpec{
 		Containers: []corev1.Container{
 			{
 				Name:            cluster.Name,
-				Image:           cluster.Spec.Image.Repository + ":" + cluster.Spec.Image.Tag,
-				ImagePullPolicy: corev1.PullPolicy(cluster.Spec.Image.PullPolicy),
+				Image:           ic.Repository + ":" + ic.Tag,
+				ImagePullPolicy: corev1.PullPolicy(ic.PullPolicy),
 				Ports:           r.defaultZookeeperPorts(),
-				Command: []string{
-					"$ZOOKEEPER_HOME/bin/zkStart.sh",
-				},
+				//Command: []string{
+				//	fmt.Sprintf("%s/bin/zkStart.sh", DefaultZookeeperHome),
+				//},
 				ReadinessProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
 						Exec: &corev1.ExecAction{
@@ -242,7 +273,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 							Command: []string{
 								"/bin/bash",
 								"-c",
-								"$ZOOKEEPER_HOME/bin/zkServer.sh status"},
+								fmt.Sprintf("%s/bin/zkServer.sh status", DefaultZookeeperHome)},
 						},
 					},
 					InitialDelaySeconds: DefaultLivenessProbeInitialDelaySeconds,
@@ -254,19 +285,19 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 				VolumeMounts: []corev1.VolumeMount{
 					{
 						Name:      ClusterResourceName(cluster, DefaultConfigNameSuffix),
-						MountPath: "/opt/zookeeper/conf/" + DefaultZooConfigFileName,
+						MountPath: fmt.Sprintf("%s/conf/%s", DefaultZookeeperHome, DefaultZooConfigFileName),
 						SubPath:   DefaultZooConfigFileName,
 					},
 					{
 						Name:      ClusterResourceName(cluster, DefaultConfigNameSuffix),
-						MountPath: "/opt/zookeeper/conf/" + DefaultLogConfigFileName,
+						MountPath: fmt.Sprintf("%s/conf/%s", DefaultZookeeperHome, DefaultLogConfigFileName),
 						SubPath:   DefaultLogConfigFileName,
 					},
-					{
-						Name:      ClusterResourceName(cluster, DefaultConfigNameSuffix),
-						MountPath: "/opt/zookeeper/bin/" + DefaultStartScriptFileName,
-						SubPath:   DefaultStartScriptFileName,
-					},
+					//{
+					//	Name:      ClusterResourceName(cluster, DefaultConfigNameSuffix),
+					//	MountPath: fmt.Sprintf("%s/bin/%s", DefaultZookeeperHome, DefaultStartScriptFileName),
+					//	SubPath:   DefaultStartScriptFileName,
+					//},
 					{
 						Name:      ClusterResourceName(cluster, DefaultDataNameSuffix),
 						MountPath: DefaultDataPath,
@@ -278,8 +309,8 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 				},
 			},
 		},
+		ImagePullSecrets:              tmpPullSecrets,
 		RestartPolicy:                 corev1.RestartPolicyAlways,
-		ServiceAccountName:            ClusterResourceName(cluster),
 		TerminationGracePeriodSeconds: &tgp,
 		Volumes: []corev1.Volume{
 			{
@@ -298,11 +329,29 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 								Key:  DefaultLogConfigFileName,
 								Path: DefaultLogConfigFileName,
 							},
-							{
-								Key:  DefaultStartScriptFileName,
-								Path: DefaultStartScriptFileName,
-							},
+							//{
+							//	Key:  DefaultStartScriptFileName,
+							//	Path: DefaultStartScriptFileName,
+							//},
 						},
+					},
+				},
+			},
+			{
+				Name: ClusterResourceName(cluster, DefaultDataNameSuffix),
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: ClusterResourceName(cluster, DefaultDataNameSuffix),
+						ReadOnly:  false,
+					},
+				},
+			},
+			{
+				Name: ClusterResourceName(cluster, DefaultLogNameSuffix),
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: ClusterResourceName(cluster, DefaultLogNameSuffix),
+						ReadOnly:  false,
 					},
 				},
 			},
@@ -318,6 +367,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 	if err != nil {
 		return nil, err
 	}
+	sc := GetStorageClassName(cluster)
 	stsDesired := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ClusterResourceName(cluster),
@@ -329,7 +379,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 				MatchLabels: ClusterResourceLabels(cluster),
 			},
 			ServiceName: ClusterResourceName(cluster),
-			Replicas:    int32Ptr(cluster.Spec.Resource.Replicas),
+			Replicas:    int32Ptr(getReplicas(cluster)),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ClusterResourceLabels(cluster),
@@ -344,7 +394,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 						Labels:    ClusterResourceLabels(cluster),
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &cluster.Spec.Resource.StorageClass,
+						StorageClassName: &sc,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
@@ -360,7 +410,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 						Labels:    ClusterResourceLabels(cluster),
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &cluster.Spec.Resource.StorageClass,
+						StorageClassName: &sc,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},

@@ -15,3 +15,10 @@ func ClusterResourceLabels(cluster *zookeeperv1.ZookeeperCluster) map[string]str
 		"app":     DefaultClusterSign,
 	}
 }
+
+func GetStorageClassName(cluster *zookeeperv1.ZookeeperCluster) string {
+	if cluster.Spec.Resource.StorageClass != "" {
+		return cluster.Spec.Resource.StorageClass
+	}
+	return DefaultStorageClass
+}

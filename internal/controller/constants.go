@@ -1,5 +1,7 @@
 package controller
 
+import "strconv"
+
 const (
 	// DefaultNameSuffix is the default name suffix of the resources of the zookeeper
 	DefaultNameSuffix = "-zookeeper"
@@ -22,9 +24,10 @@ const (
 	DefaultConfigNameSuffix      = "-config"
 	DefaultHeadlessSvcNameSuffix = "-headless"
 
-	DefaultZooConfigFileName   = "zoo.cfg"
-	DefaultLogConfigFileName   = "log4j.properties"
-	DefaultStartScriptFileName = "zkStart.sh"
+	DefaultZookeeperHome     = "/opt/zookeeper"
+	DefaultZooConfigFileName = "zoo.cfg"
+	DefaultLogConfigFileName = "log4j.properties"
+	//DefaultStartScriptFileName = "zkStart.sh"
 
 	DefaultDataPath = "/opt/zookeeper/data"
 	DefaultLogPath  = "/opt/zookeeper/logs"
@@ -44,8 +47,6 @@ const (
 	DefaultAdminPortName = "admin"
 	DefaultAdminPortPort = 8080
 
-	DefaultInitLimit = 10
-	DefaultSyncLimit = 2
 	// DefaultTerminationGracePeriod is the default time given before the
 	// container is stopped. This gives clients time to disconnect from a
 	// specific node gracefully.
@@ -96,3 +97,32 @@ const (
 	// for the liveness probe
 	DefaultLivenessProbeTimeoutSeconds = 10
 )
+
+var DefaultZooConfKeyValue = map[string]string{
+	"clientPort":                    strconv.Itoa(DefaultClientPort),
+	"admin.serverPort":              strconv.Itoa(DefaultAdminPortPort),
+	"dataDir":                       DefaultDataPath,
+	"dataLogDir":                    DefaultLogPath,
+	"4lw.commands.whitelist":        "cons, envi, conf, crst, srvr, stat, mntr, ruok",
+	"admin.enableServer":            "true",
+	"reconfigEnabled":               "false",
+	"skipACL":                       "yes",
+	"metricsProvider.className":     "org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider",
+	"metricsProvider.httpPort":      strconv.Itoa(DefaultMetricsPort),
+	"metricsProvider.exportJvmInfo": "true",
+	"initLimit":                     strconv.Itoa(10),
+	"syncLimit":                     strconv.Itoa(2),
+	"tickTime":                      strconv.Itoa(2000),
+	"globalOutstandingLimit":        strconv.Itoa(1000),
+	"preAllocSize":                  strconv.Itoa(65536),
+	"snapCount":                     strconv.Itoa(10000),
+	"commitLogCount":                strconv.Itoa(500),
+	"snapSizeLimitInKb":             strconv.Itoa(4194304),
+	"maxCnxns":                      strconv.Itoa(0),
+	"maxClientCnxns":                strconv.Itoa(60),
+	"minSessionTimeout":             strconv.Itoa(4000),
+	"maxSessionTimeout":             strconv.Itoa(40000),
+	"autopurge.snapRetainCount":     strconv.Itoa(3),
+	"autopurge.purgeInterval":       strconv.Itoa(1),
+	"quorumListenOnAllIPs":          strconv.FormatBool(true),
+}

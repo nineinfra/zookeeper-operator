@@ -114,7 +114,7 @@ func (r *ZookeeperClusterReconciler) reconcileClusterStatus(ctx context.Context,
 	}
 	cluster.Status.Members.Ready = readyMembers
 	cluster.Status.Members.Unready = unreadyMembers
-	
+
 	logger.Info("Updating zookeeper status")
 	if cluster.Status.ReadyReplicas == cluster.Spec.Resource.Replicas {
 		cluster.Status.SetPodsReadyConditionTrue()

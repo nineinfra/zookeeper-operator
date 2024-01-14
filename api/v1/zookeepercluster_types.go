@@ -50,11 +50,19 @@ type ImageConfig struct {
 
 // ZookeeperClusterSpec defines the desired state of ZookeeperCluster
 type ZookeeperClusterSpec struct {
-	Version  string            `json:"version"`
-	Image    ImageConfig       `json:"image"`
-	Resource ResourceConfig    `json:"resource"`
-	Conf     map[string]string `json:"conf"`
-	K8sConf  map[string]string `json:"k8sConf"`
+	// Version. version of the zookeeper cluster.
+	Version string `json:"version"`
+	// Image. image config of the zookeeper cluster.
+	Image ImageConfig `json:"image"`
+	// Resource. resouce config of the zookeeper cluster.
+	// +optional
+	Resource ResourceConfig `json:"resource,omitempty"`
+	// Conf. k/v configs for the zoo.cfg.
+	// +optional
+	Conf map[string]string `json:"conf,omitempty"`
+	// K8sConf. k/v configs for the zookeeper cluster in k8s.such as the cluster domain
+	// +optional
+	K8sConf map[string]string `json:"k8sConf,omitempty"`
 }
 
 //+kubebuilder:object:root=true
