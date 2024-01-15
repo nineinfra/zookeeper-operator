@@ -17,9 +17,9 @@ const (
 	DefaultClusterDomainName = "clusterDomain"
 	DefaultClusterDomain     = "cluster.local"
 
-	DefaultDataNameSuffix = "-data"
+	DefaultDataVolumeName = "data"
 
-	DefaultLogNameSuffix = "-log"
+	DefaultLogVolumeName = "log"
 
 	DefaultConfigNameSuffix      = "-config"
 	DefaultHeadlessSvcNameSuffix = "-headless"

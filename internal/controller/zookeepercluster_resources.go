@@ -88,14 +88,6 @@ func constructLogConfig() string {
 	return map2String(tmpConf)
 }
 
-//func constructStartScript() string {
-//	return "#!/bin/sh\n\n" +
-//		"ZOOKEEPER_ID=${POD_NAME##*-}" + "\n" +
-//		"ZOOKEEPER_ID=$((ZOOKEEPER_ID+1))" + "\n" +
-//		"echo ${ZOOKEEPER_ID} > ${ZOOKEEPER_DATA_DIR}/myid" + "\n" +
-//		fmt.Sprintf("exec %s/bin/zkServer.sh start-forground", DefaultZookeeperHome)
-//}
-
 func getImageConfig(cluster *zookeeperv1.ZookeeperCluster) zookeeperv1.ImageConfig {
 	ic := zookeeperv1.ImageConfig{
 		Repository:  cluster.Spec.Image.Repository,
@@ -190,7 +182,6 @@ func (r *ZookeeperClusterReconciler) constructConfigMap(cluster *zookeeperv1.Zoo
 		Data: map[string]string{
 			DefaultZooConfigFileName: constructZooConfig(cluster),
 			DefaultLogConfigFileName: constructLogConfig(),
-			//DefaultStartScriptFileName: constructStartScript(),
 		},
 	}
 	if err := ctrl.SetControllerReference(cluster, cm, r.Scheme); err != nil {
@@ -293,17 +284,12 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 						MountPath: fmt.Sprintf("%s/conf/%s", DefaultZookeeperHome, DefaultLogConfigFileName),
 						SubPath:   DefaultLogConfigFileName,
 					},
-					//{
-					//	Name:      ClusterResourceName(cluster, DefaultConfigNameSuffix),
-					//	MountPath: fmt.Sprintf("%s/bin/%s", DefaultZookeeperHome, DefaultStartScriptFileName),
-					//	SubPath:   DefaultStartScriptFileName,
-					//},
 					{
-						Name:      ClusterResourceName(cluster, DefaultDataNameSuffix),
+						Name:      DefaultDataVolumeName,
 						MountPath: DefaultDataPath,
 					},
 					{
-						Name:      ClusterResourceName(cluster, DefaultLogNameSuffix),
+						Name:      DefaultLogVolumeName,
 						MountPath: DefaultLogPath,
 					},
 				},
@@ -329,28 +315,24 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 								Key:  DefaultLogConfigFileName,
 								Path: DefaultLogConfigFileName,
 							},
-							//{
-							//	Key:  DefaultStartScriptFileName,
-							//	Path: DefaultStartScriptFileName,
-							//},
 						},
 					},
 				},
 			},
 			{
-				Name: ClusterResourceName(cluster, DefaultDataNameSuffix),
+				Name: DefaultDataVolumeName,
 				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: ClusterResourceName(cluster, DefaultDataNameSuffix),
+						ClaimName: DefaultDataVolumeName,
 						ReadOnly:  false,
 					},
 				},
 			},
 			{
-				Name: ClusterResourceName(cluster, DefaultLogNameSuffix),
+				Name: DefaultLogVolumeName,
 				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: ClusterResourceName(cluster, DefaultLogNameSuffix),
+						ClaimName: DefaultLogVolumeName,
 						ReadOnly:  false,
 					},
 				},
@@ -389,7 +371,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ClusterResourceName(cluster, DefaultDataNameSuffix),
+						Name:      DefaultDataVolumeName,
 						Namespace: cluster.Namespace,
 						Labels:    ClusterResourceLabels(cluster),
 					},
@@ -405,7 +387,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeep
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ClusterResourceName(cluster, DefaultLogNameSuffix),
+						Name:      DefaultLogVolumeName,
 						Namespace: cluster.Namespace,
 						Labels:    ClusterResourceLabels(cluster),
 					},
