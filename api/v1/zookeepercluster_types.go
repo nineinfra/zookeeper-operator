@@ -65,6 +65,7 @@ type ZookeeperClusterSpec struct {
 	K8sConf map[string]string `json:"k8sConf,omitempty"`
 }
 
+// +genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
