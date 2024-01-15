@@ -1,9 +1,9 @@
 apiVersion: v2
-appVersion: 0.383.0
+appVersion: 0.6.0
 description: The Zookeeper Operator for Apache Zookeeper
 home: https://github.com/nineinfra/zookeeper-operator
 maintainers:
 - name: nineinfra
   url: https://github.com/nineinfra
 name: zookeeper-operator
-version: v0.383.0
+version: v0.6.0

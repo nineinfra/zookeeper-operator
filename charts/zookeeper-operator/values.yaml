@@ -3,7 +3,7 @@
 image:
   repository: nineinfra/zookeeper-operator
   pullPolicy: IfNotPresent
-  tag: v0.383.0
+  tag: v0.6.0
 
 imagePullSecrets: []
 nameOverride: ""
