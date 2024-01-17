@@ -56,7 +56,7 @@ func constructZooConfig(cluster *zookeeperv1.ZookeeperCluster) string {
 	}
 	replicas := getReplicas(cluster)
 	for i := 0; i < int(replicas); i++ {
-		zooConf[fmt.Sprintf("servier.%d", i+1)] = fmt.Sprintf("%s-%d.%s.%s.svc.%s:%d:%d",
+		zooConf[fmt.Sprintf("server.%d", i+1)] = fmt.Sprintf("%s-%d.%s.%s.svc.%s:%d:%d",
 			ClusterResourceName(cluster),
 			i,
 			ClusterResourceName(cluster),
@@ -239,9 +239,7 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 				Image:           ic.Repository + ":" + ic.Tag,
 				ImagePullPolicy: corev1.PullPolicy(ic.PullPolicy),
 				Ports:           r.defaultZookeeperPorts(),
-				//Command: []string{
-				//	fmt.Sprintf("%s/bin/zkStart.sh", DefaultZookeeperHome),
-				//},
+				Env:             DefaultDownwardAPI(),
 				ReadinessProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
 						Exec: &corev1.ExecAction{

@@ -59,7 +59,7 @@ const (
 
 	// DefaultReadinessProbeInitialDelaySeconds is the default initial delay (in seconds)
 	// for the readiness probe
-	DefaultReadinessProbeInitialDelaySeconds = 30
+	DefaultReadinessProbeInitialDelaySeconds = 40
 
 	// DefaultReadinessProbePeriodSeconds is the default probe period (in seconds)
 	// for the readiness probe
@@ -67,7 +67,7 @@ const (
 
 	// DefaultReadinessProbeFailureThreshold is the default probe failure threshold
 	// for the readiness probe
-	DefaultReadinessProbeFailureThreshold = 3
+	DefaultReadinessProbeFailureThreshold = 10
 
 	// DefaultReadinessProbeSuccessThreshold is the default probe success threshold
 	// for the readiness probe
@@ -79,7 +79,7 @@ const (
 
 	// DefaultLivenessProbeInitialDelaySeconds is the default initial delay (in seconds)
 	// for the liveness probe
-	DefaultLivenessProbeInitialDelaySeconds = 30
+	DefaultLivenessProbeInitialDelaySeconds = 40
 
 	// DefaultLivenessProbePeriodSeconds is the default probe period (in seconds)
 	// for the liveness probe
@@ -87,7 +87,7 @@ const (
 
 	// DefaultLivenessProbeFailureThreshold is the default probe failure threshold
 	// for the liveness probe
-	DefaultLivenessProbeFailureThreshold = 3
+	DefaultLivenessProbeFailureThreshold = 10
 
 	// DefaultLivenessProbeSuccessThreshold is the default probe success threshold
 	// for the readiness probe
