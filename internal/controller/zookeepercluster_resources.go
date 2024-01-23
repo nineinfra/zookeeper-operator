@@ -327,6 +327,18 @@ func (r *ZookeeperClusterReconciler) constructZookeeperPodSpec(cluster *zookeepe
 				},
 			},
 		},
+		Affinity: &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+					{
+						TopologyKey: "kubernetes.io/hostname",
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: ClusterResourceLabels(cluster),
+						},
+					},
+				},
+			},
+		},
 	}
 }
 func (r *ZookeeperClusterReconciler) constructZookeeperWorkload(cluster *zookeeperv1.ZookeeperCluster) (*appsv1.StatefulSet, error) {
