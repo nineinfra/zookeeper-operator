@@ -31,15 +31,6 @@ func getReplicas(cluster *zookeeperv1.ZookeeperCluster) int32 {
 	return DefaultReplicas
 }
 
-func getClusterDomain(cluster *zookeeperv1.ZookeeperCluster) string {
-	if cluster.Spec.K8sConf != nil {
-		if value, ok := cluster.Spec.K8sConf[DefaultClusterDomainName]; ok {
-			return value
-		}
-	}
-	return DefaultClusterDomain
-}
-
 func getZooConfigValue(cluster *zookeeperv1.ZookeeperCluster, key string, value string) string {
 	if cluster.Spec.Conf != nil {
 		if value, ok := cluster.Spec.Conf[key]; ok {
@@ -61,7 +52,7 @@ func constructZooConfig(cluster *zookeeperv1.ZookeeperCluster) string {
 			i,
 			ClusterResourceName(cluster),
 			cluster.Namespace,
-			getClusterDomain(cluster),
+			GetClusterDomain(cluster),
 			DefaultQuorumPort,
 			DefaultElectionPort)
 	}

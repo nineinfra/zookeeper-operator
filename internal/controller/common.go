@@ -24,6 +24,15 @@ func GetStorageClassName(cluster *zookeeperv1.ZookeeperCluster) string {
 	return DefaultStorageClass
 }
 
+func GetClusterDomain(cluster *zookeeperv1.ZookeeperCluster) string {
+	if cluster.Spec.K8sConf != nil {
+		if value, ok := cluster.Spec.K8sConf[DefaultClusterDomainName]; ok {
+			return value
+		}
+	}
+	return DefaultClusterDomain
+}
+
 func DefaultDownwardAPI() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
